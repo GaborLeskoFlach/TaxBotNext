@@ -114,7 +114,9 @@ bot.dialog('set_email', [
         //const matched = isValidEmail(results.response)
         const matched = true
         if (matched) {
-            var email = matched ? matched.join('') : '';
+            //var email = matched ? matched.join('') : '';
+            const email = "test@test.com"
+            
             session.userData.email = email; // Save the number.
             session.say('Thank you','Thank you')
             session.endDialog()
@@ -147,7 +149,7 @@ bot.dialog('nominatedFor_selector', [
         session.userData.nominatedFor = activity
 
         builder.Prompts.text(session, `Got it... ${session.userData.username} you've selected ${activity}. Is this correct? (yes/no) `, {
-            speak : `Got it... ${session.userData.username} you've selected__ ${activity}. Is this correct? Please say Yes or No`,
+            speak : `Got it... ${session.userData.username} you've selected ${activity}. Is this correct? Please say Yes or No`,
             retrySpeak : 'I am still here and waiting for your input',
             inputHint: builder.InputHint.expectingInput
         })                   

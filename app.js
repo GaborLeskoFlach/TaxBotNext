@@ -37,7 +37,7 @@ bot.on('conversationUpdate', (message) => {
     if (message.membersAdded) {
         message.membersAdded.forEach((identity) => {
             if (identity.id === message.address.bot.id) {
-                bot.beginDialog(message.address, '/');
+                bot.beginDialog(message.address, 'menu');
             }
         })
     }
@@ -48,12 +48,8 @@ bot.on('error', (e) => {
 })
 
 bot.dialog('/', [
-    (session, args, next) => {
-        session.say('This is a Bot Assistant to help with nominating individuals/teams for awards','This is a Bot Assistant to help with nominating individuals/teams for awards')
-        next()
-    },
     (session, args, next) => {        
-        session.beginDialog('greetings')              
+        session.beginDialog('greetings')
     },
     (session, args, next) => {
         session.beginDialog('set_email')
@@ -71,39 +67,42 @@ bot.dialog('/', [
         session.beginDialog('nominate')
     },
     (session, args) => {
-        session.endConversation("Thanks, it has been a pleasure")
+        session.beginDialog('this_is_the_end')
     }  
 ])
 
 bot.dialog('greetings', [
-    (session) => {
+    (session) => {        
         builder.Prompts.text(session, speechTextLib.welcome_what_is_your_name, {
             speak: speechTextLib.welcome_what_is_your_name,
             retrySpeak: speechTextLib.welcome_still_waiting_for_input,
-            inputHint: builder.InputHint.expectingInput
+            inputHint: builder.InputHint.acceptingInput
         }) 
     },
-    (session, results) => {
+    (session, results, next) => {
         if(results.response){
-            session.userData.username = results.response;
-            session.say(`Sweet`,`Sweet`)
+            const fullName = results.response
+            let nameParts = fullName.split(' ')
+            session.userData.username = fullName
+                                    
+            session.userData.firstName = nameParts[0] ? nameParts[0] : ''
+            session.userData.lastName = nameParts[1] ? nameParts[1] : ''
         }
-        
-        session.endDialog()
+        session.beginDialog('set_email')
     },    
 ])
 
 bot.dialog('set_email', [
     (session, args) => {
-        if (args && args.reprompt) {
+        if (args && args.reprompt) {            
             builder.Prompts.text(session, "Oops, looks like it's invalid, try again.", {
                 speak: 'Oops, looks like it is invalid, try again.',
                 retrySpeak: 'Still here, waiting for your input',
                 inputHint: builder.InputHint.expectingInput                
             })
         } else {
-            builder.Prompts.text(session, `${session.userData.username} please provide a valid email address so I can proceed.`, {
-                speak: `${session.userData.username} please provide a valid email address so I can proceed.`,
+            builder.Prompts.text(session, `${session.userData.firstName} please provide a valid email address so I can proceed.`, {
+                speak: `${session.userData.firstName} please provide a valid email address so I can proceed.`,
                 retrySpeak: 'Still here, waiting for your input',
                 inputHint: builder.InputHint.expectingInput                    
             });
@@ -111,31 +110,36 @@ bot.dialog('set_email', [
     },
     (session, results) => {
 
-        //const matched = isValidEmail(results.response)
-        const matched = true
+        const matched = isValidEmail(results.response)
+        //const matched = true
         if (matched) {
             //var email = matched ? matched.join('') : '';
             const email = "test@test.com"
             
             session.userData.email = email; // Save the number.
-            session.say('Thank you','Thank you')
-            session.endDialog()
+            session.say('Sweet','Sweet bananas')
+            session.beginDialog('nominatedFor_selector')
         } else {
             // Repeat the dialog
-            session.replaceDialog('set_email', { reprompt: true });
+            //session.replaceDialog('set_email', { reprompt: true });
+            session.say("Unfortunately I have no idea why I cannot accept a perfectly normal email address. Anyways, let's just continue",
+            "Unfortunately I have no idea why I cannot accept a perfectly normal email address. Anyways, let's just continue")
+            session.beginDialog('nominatedFor_selector')
         }
     }
 ])
 
 bot.dialog('nominatedFor_selector', [
     (session, results) => {
-        session.say('Please wait a second till I gather some data','Please bear with me till I gather some data')
+        session.say('Please bear with me till I gather some data','Please bear with me till I gather some data')
         
         getNominationCategories().then((response) => {
             session.userData.nominationChoices = response
             if(session.userData.nominationChoices){
-                builder.Prompts.choice(session, `All done, now please select/say which option you would like me to proceed with?`, session.userData.nominationChoices, {
-                    speak: 'All done, now please select/say which option you would like me to proceed with'
+                builder.Prompts.choice(session, `All done, now please select or say which option you would like me to proceed with?`, session.userData.nominationChoices, {
+                    listStyle: builder.ListStyle.button ,
+                    speak: 'All done, now please select or say which option you would like me to proceed with',
+                    inputHint: builder.InputHint.expectingInput
                 })              
             }
         })
@@ -148,8 +152,8 @@ bot.dialog('nominatedFor_selector', [
 
         session.userData.nominatedFor = activity
 
-        builder.Prompts.text(session, `Got it... ${session.userData.username} you've selected ${activity}. Is this correct? (yes/no) `, {
-            speak : `Got it... ${session.userData.username} you've selected ${activity}. Is this correct? Please say Yes or No`,
+        builder.Prompts.text(session, `Got it... ${session.userData.firstName} you've selected ${activity}. Is this correct? (yes/no) `, {
+            speak : `Got it... ${session.userData.firstName} you've selected ${activity}. Is this correct? Please say Yes or No`,
             retrySpeak : 'I am still here and waiting for your input',
             inputHint: builder.InputHint.expectingInput
         })                   
@@ -157,8 +161,10 @@ bot.dialog('nominatedFor_selector', [
     (session, results) => {
         //API Call
         if(results.response.toLowerCase() === 'yes'){
-            session.endDialog()
-        }        
+            session.beginDialog('nominee_type')
+        }else{
+            session.replaceDialog('this_is_the_end')
+        }
     }   
 ])
 
@@ -176,7 +182,7 @@ bot.dialog('nominee_type', [
         if(args.response){
             session.userData.nomineeType = args.response.entity
         }
-        session.endDialog()
+        session.beginDialog('nominee_name')
     }
 ])
 
@@ -203,34 +209,112 @@ bot.dialog('nominee_name', [
         if(results.response){
             session.userData.nominee = results.response
         }
-        session.endDialog()
+        session.beginDialog('nominate')
     }
 ])
 
 bot.dialog('nominate', [
     (session, args, next) => {
 
-        const who = session.userData.username
-        const nomineeType = session.userData.nomineeType
-        const nominee = session.userData.nominee
-        const nominatedFor = session.userData.nominatedFor
+        session.say(
+            `Here is the summary of the data I've collected.`,
+            `Here is the summary of the data I've collected.`
+        )
 
-        var card = new builder.HeroCard(session)
-            .title('Nomation')
-            .subtitle(`${who} nominated ${nominee} for ${nominatedFor}`)
-            .buttons([
-                builder.CardAction.imBack(session, 'nominate', 'Nominate')
-            ]);
+        var card = createHeroCard(session)
         var msg = new builder.Message(session)
-            .speak('Say something dude')
-            .addAttachment(card)
-            .inputHint(builder.InputHint.acceptingInput); // Tell Cortana to accept input
-        
+            //.speak(speak(session, 'Please say Nominate or click the Nominate button'))
+            .inputHint(builder.InputHint.acceptingInput) // Tell Cortana to accept input
+            .addAttachment(card);
         session.send(msg)
+
+        builder.Prompts.confirm(session, "Are you sure you wish to proceed with the Nomination?",{
+            speak: "Are you sure you wish to proceed with the Nomination?",
+            retrySpeak: "Still here waiting for your input",
+            inputHint: builder.InputHint.expectingInput
+        });
+    },
+    (session, result, next) => {
+        if(result.response === true){
+
+            nominate().then((response) => {
+                //session.say('All done, good job', 'All done, good job')
+                //session.replaceDialog('menu')
+                builder.Prompts.confirm(session, "All done, nomination has been posted. Is there anything else I can help you with?", {
+                    speak: "All done, nomination has been posted. Is there anything else I can help you with?",
+                    retrySpeak: "Still here waiting for your input",
+                    inputHint: builder.InputHint.expectingInp                    
+                });
+            })
+
+        }else{
+            next()
+        }
     },
     (session, results) => {
-        console.log('hello')
+        if(results.response === true){
+            session.replaceDialog('menu')
+        }else{
+            session.endConversation(`See you another day ${session.userData.username}`, {
+                speak : 'Bye bye'
+            })
+        }
+    } 
+])
+
+bot.dialog('menu', [
+    (session, args) => {
+
+        session.say(
+            "Hi, I'm a Virtual Bot Assistant to help with nominating individuals/teams for awards",
+            "Hi, I'm a Virtual Bot Assistant to help with nominating individuals/teams for awards")
+
+        builder.Prompts.choice(session, 'Here is a list of things I can help you with', supportedFunctions, {
+            listStyle: builder.ListStyle.button ,
+            speak: 'Here is a list of things I can help you with. Please select one'
+        });        
+    },
+    (session, results) => {
+        if(results.response.entity){
+            switch(results.response.entity){
+                case "1":
+                    session.replaceDialog('greetings')
+                    break
+                case "2":
+                    session.replaceDialog('get_my_nominations')
+                    break
+                case "3":
+                    session.replaceDialog('get_all_users_to_nominate')
+                    break
+                case "4":
+                    session.replaceDialog('get_all_awards')
+                    break
+                case "5":
+                    session.replaceDialog('help')
+                    break                    
+                default:
+                    session.replaceDialog('menu')
+            }
+        }
     }
+]).triggerAction({ matches: /menu/i });
+
+bot.dialog('get_my_nominations', [
+    (session, args) => {
+        session.say('These are all your nominations', 'There are all your nominations')
+    }
+])
+
+bot.dialog('get_all_users_to_nominate', [
+    (session, args) => {
+        session.say('These are all the users to nominate','These are all the users to nominate')
+    }
+])
+
+bot.dialog('get_all_awards',[
+    (session, args) => {
+        session.say('These are the available awards to pick from','These are the available awards to pick from')
+    } 
 ])
 
 bot.dialog('error', [
@@ -238,6 +322,60 @@ bot.dialog('error', [
         session.say(`Oops something went wrong => ${e}`, `Ooops something went wrong!`)
     }
 ])
+
+bot.dialog('this_is_the_end', [
+    (session, args) => {
+        session.say(`It's been an absolute pleasure ${session.userData.firstName}. Have an awesome day!`,
+        `It's been an absolute pleasure ${session.userData.firstName}. Have an awesome day!`)
+    }
+])
+
+/**
+ * Every bot should have a help dialog. Ours will use a card with some buttons
+ * to educate the user with the options available to them.
+ */
+bot.dialog('help', function (session) {
+    var card = new builder.HeroCard(session)
+        .title("I'm here to help")
+        .buttons([
+            builder.CardAction.imBack(session, 'nominate', 'Nominate'),
+        ]);
+    var msg = new builder.Message(session)
+        .speak(speak(session, "Say nominate if you would like to nominate a team or individual for an award"))
+        .addAttachment(card)
+        .inputHint(builder.InputHint.acceptingInput);
+    session.send(msg).endDialog();
+}).triggerAction(
+    { 
+        matches: /help/i          
+    });
+
+/*********************************** HELPERS ************************************/
+
+var supportedFunctions = [
+    { value: '1', action: { title: 'Nominate a Team or Individual for an award' }, synonyms: 'one|nominate|nominate a team|nominate an individual|nominate for award' },
+    { value: '2', action: { title: 'Get my nominations' }, synonyms: 'two|too|get nominations|get my nominations|my nominations' },
+    { value: '3', action: { title: 'Get all users to nominate' }, synonyms: 'three|tree|get users|get all users|get users to nominate|get all users to nominate' },
+    { value: '4', action: { title: 'Get awards' }, synonyms: 'four|for|get all awards|get awards' },
+    { value: '5', action: { title: 'Help' }, synonyms: 'five|help|need help|I need help|save me' },
+]
+
+function createHeroCard(session) {
+
+    const who = session.userData.username
+    const nomineeType = session.userData.nomineeType
+    const nominee = session.userData.nominee
+    const nominatedFor = session.userData.nominatedFor
+
+    return new builder.HeroCard(session)
+        .title('Summary')
+        .subtitle('View the collected information')
+        .text(`${who} has nominated ${nomineeType} ${nominee} for ${nominatedFor}`)
+        /*
+        .buttons([
+            builder.CardAction.imBack(session, 'nominate', 'Nominate'),
+        ]);*/
+}
 
 function getNomineeType(){
     return new Promise((resolve,reject) => {
@@ -260,6 +398,12 @@ function getNominationCategories(){
         ]
     
         setTimeout(() => resolve(choices), 3000);        
+    })
+}
+
+function nominate(){
+    return new Promise((resolve, reject) => {
+        setTimeout(() => { resolve() }, 5000);
     })
 }
 

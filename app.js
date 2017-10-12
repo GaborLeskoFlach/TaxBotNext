@@ -110,7 +110,9 @@ bot.dialog('set_email', [
         }
     },
     (session, results) => {
-        const matched = isValidEmail(results.response)
+
+        //const matched = isValidEmail(results.response)
+        const matched = true
         if (matched) {
             var email = matched ? matched.join('') : '';
             session.userData.email = email; // Save the number.

@@ -148,9 +148,17 @@ bot.dialog('greetings', [
 bot.dialog('set_email', [
     (session, args) => {
         if (args && args.reprompt) {
-            builder.Prompts.text(session, "Oops, looks like it's invalid, try again.")
+            builder.Prompts.text(session, "Oops, looks like it's invalid, try again.", {
+                speak: 'Oops, looks like it is invalid, try again.',
+                retrySpeak: 'Still here, waiting for your input',
+                inputHint: builder.InputHint.expectingInput                
+            })
         } else {
-            builder.Prompts.text(session, `${session.userData.username} please provide a valid email address so I can proceed.`);
+            builder.Prompts.text(session, `${session.userData.username} please provide a valid email address so I can proceed.`, {
+                speak: `${session.userData.username} please provide a valid email address so I can proceed.`,
+                retrySpeak: 'Still here, waiting for your input',
+                inputHint: builder.InputHint.expectingInput                    
+            });
         }
     },
     (session, results) => {
@@ -158,7 +166,7 @@ bot.dialog('set_email', [
         if (matched) {
             var email = matched ? matched.join('') : '';
             session.userData.email = email; // Save the number.
-            session.say('Thank you','Thanks you')
+            session.say('Thank you','Thank you')
             session.endDialog()
         } else {
             // Repeat the dialog
@@ -168,9 +176,9 @@ bot.dialog('set_email', [
 ])
 
 bot.dialog('nominatedFor_selector', [
-    (session, results) => {
+    async (session, results) => {
         session.say('Please wait a second till I gather some data','Please bear with me till I gather some data')
-        const options = getNominationCategories();
+        const options = await getNominationCategories();
         session.userData.nominationChoices = options
         if(options){
             builder.Prompts.choice(session, `All done, now please select/say which option you would like me to proceed with?`, options, {
@@ -200,9 +208,9 @@ bot.dialog('nominatedFor_selector', [
 ])
 
 bot.dialog('nominee_type', [
-    (session, args, next) => {
+    async (session, args, next) => {
 
-        const choices = getNomineeType()
+        const choices = await getNomineeType()
 
         builder.Prompts.choice(session, 'Are you nominating a Team or and Individual?', choices, {
             listStyle: builder.ListStyle.button ,
@@ -270,22 +278,47 @@ bot.dialog('nominate', [
     }
 ])
 
-
 bot.dialog('error', [
     (session, args) => {
         session.say(`Oops something went wrong => ${e}`, `Ooops something went wrong!`)
     }
 ])
 
-function getNomineeType(){
-    return null
+async function getNomineeType(){
+    await timeout(3000)
+    
+    const choices = [
+        { value: '1', action: { title: 'Team' }, synonyms: 'one|team' },
+        { value: '2', action: { title: 'Individual' }, synonyms: 'two|individual' },            
+    ]
+    
+    return choices    
 }
 
-function getNominationCategories(){
-    return null
+async function getNominationCategories(){
+    await timeout(3000)
+
+    var choices = [
+        { value: '1', action: { title: 'Nominate for Cleanest Desk award' }, synonyms: 'one|cleanest desk award' },
+        { value: '2', action: { title: 'Nominate for Cleanest Mug award' }, synonyms: 'two|too|cleanest mug award' },
+        { value: '3', action: { title: 'Nominate for Cleanest Keyboard award' }, synonyms: 'three|tree|cleanest keyboard award' },
+        { value: '4', action: { title: 'Nominate for Cleanest Screen award' }, synonyms: 'four|for|cleanest screen award' },
+    ]
+
+    return choices
+}
+
+async function timeout(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function isValidEmail(value){
     var matched = value.match(/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g);
     return matched
+}
+
+/** Helper function to wrap SSML stored in the prompts file with <speak/> tag. */
+function speak(session, prompt) {
+    var localized = session.gettext(prompt);
+    return ssml.speak(localized);
 }

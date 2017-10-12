@@ -34,7 +34,7 @@ server.post('/api/messages', connector.listen());
 var bot = new builder.UniversalBot(connector)
 
 // Send welcome when conversation with bot is started, by initiating the root dialog
-
+/*
 bot.on('conversationUpdate', (message) => {
     if (message.membersAdded) {
         message.membersAdded.forEach((identity) => {
@@ -44,7 +44,7 @@ bot.on('conversationUpdate', (message) => {
         })
     }
 })
-
+*/
 
 bot.dialog('/', [
 

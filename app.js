@@ -212,8 +212,8 @@ bot.dialog('nominate', [
 /******************************* Helpers **********************************/
 
 
-async function getNomineeType(){
-    await timeout(3000)
+function getNomineeType(){
+    timeout(3000)
     
     const choices = [
         { value: '1', action: { title: 'Team' }, synonyms: 'one|team' },
@@ -223,8 +223,8 @@ async function getNomineeType(){
     return choices    
 }
 
-async function getNominationCategories(){
-    await timeout(3000)
+function getNominationCategories(){
+    timeout(3000)
 
     var choices = [
         { value: '1', action: { title: 'Nominate for Cleanest Desk award' }, synonyms: 'one|cleanest desk award' },
@@ -236,7 +236,7 @@ async function getNominationCategories(){
     return choices
 }
 
-async function timeout(ms){
+function timeout(ms){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 

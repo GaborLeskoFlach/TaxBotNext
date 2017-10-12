@@ -143,7 +143,7 @@ bot.dialog('nominatedFor_selector', [
     },
     (session, results) => {
         //API Call
-        if(results.response === 'yes'){
+        if(results.response.toLowerCase() === 'yes'){
             session.endDialog()
         }        
     }   

@@ -61,4 +61,192 @@ bot.dialog('/', [
                     " you've been programming for " + session.userData.coding + 
                     " years and use " + session.userData.language + ".");
     }
-]);
+])
+
+
+bot.dialog('greetings', [
+    (session, args, next) => {
+    
+        builder.Prompts.text(session, speechTextLib.welcome_what_is_your_name, {
+            speak: speechTextLib.welcome_what_is_your_name,
+            retrySpeak: speechTextLib.welcome_still_waiting_for_input,
+            inputHint: builder.InputHint.expectingInput
+        }) 
+    },
+    (session, results) => {
+        if(results.response){
+            session.userData.username = results.response;
+            session.say(`Sweet`,`Sweet`)
+        }
+        
+        session.endDialog()
+    },    
+])
+
+bot.dialog('set_email', [
+    (session, args) => {
+        if (args && args.reprompt) {
+            builder.Prompts.text(session, "Oops, looks like it's invalid, try again.")
+        } else {
+            builder.Prompts.text(session, `${session.userData.username} please provide a valid email address so I can proceed.`);
+        }
+    },
+    (session, results) => {
+        const matched = isValidEmail(results.response)
+        if (matched) {
+            var email = matched ? matched.join('') : '';
+            session.userData.email = email; // Save the number.
+            session.say('Thank you','Thanks you')
+            session.endDialog()
+        } else {
+            // Repeat the dialog
+            session.replaceDialog('set_email', { reprompt: true });
+        }
+    }
+])
+
+bot.dialog('nominatedFor_selector', [
+    async (session, results) => {
+        session.say('Please wait a second till I gather some data','Please bear with me till I gather some data')
+        const options = await getNominationCategories();
+        session.userData.nominationChoices = options
+        if(options){
+            builder.Prompts.choice(session, `All done, now please select/say which option you would like me to proceed with?`, options, {
+                speak: 'All done, now please select/say which option you would like me to proceed with'
+            })              
+        }
+    },
+    (session, results) => {
+        session.userData.activity = results.response.entity;
+        const choices = session.userData.nominationChoices
+        const activity = choices.find(x => x.value === session.userData.activity).action.title
+
+        session.userData.nominatedFor = activity
+
+        builder.Prompts.text(session, `Got it... ${session.userData.username} you've selected ${activity}. Is this correct? (yes/no) `, {
+            speak : `Got it... ${session.userData.username} you've selected__ ${activity}. Is this correct? Please say Yes or No`,
+            retrySpeak : 'I am still here and waiting for your input',
+            inputHint: builder.InputHint.expectingInput
+        })                   
+    },
+    (session, results) => {
+        //API Call
+        if(results.response === 'yes'){
+            session.endDialog()
+        }        
+    }   
+])
+
+bot.dialog('nominee_type', [
+    async(session, args, next) => {
+
+        const choices = await getNomineeType()
+
+        builder.Prompts.choice(session, 'Are you nominating a Team or and Individual?', choices, {
+            listStyle: builder.ListStyle.button ,
+            speak: 'Are you nominating a Team or an Individual?'
+        });
+    },
+    (session, args, next) => {
+        if(args.response){
+            session.userData.nomineeType = args.response.entity
+        }
+        session.endDialog()
+    }
+])
+
+bot.dialog('nominee_name', [
+    (session, args, next) => {
+        let question = ''
+
+        switch(session.userData.nomineeType){
+            case '1':
+                question = 'What is the name of the team you would like to nominate?'
+                break
+            case '2':
+                question = 'What is the name of the person you would like to nominate?'
+                break
+        }
+
+        builder.Prompts.text(session,question, {
+            speak: question,
+            retrySpeak: question,
+            inputHint: builder.InputHint.expectingInput
+        })        
+    },
+    (session, results) => {
+        if(results.response){
+            session.userData.nominee = results.response
+        }
+        session.endDialog()
+    }
+])
+
+bot.dialog('nominate', [
+    (session, args, next) => {
+
+        const who = session.userData.username
+        const nomineeType = session.userData.nomineeType
+        const nominee = session.userData.nominee
+        const nominatedFor = session.userData.nominatedFor
+
+        var card = new builder.HeroCard(session)
+            .title('Nomation')
+            .subtitle(`${who} nominated ${nominee} for ${nominatedFor}`)
+            .buttons([
+                builder.CardAction.imBack(session, 'nominate', 'Nominate')
+            ]);
+        var msg = new builder.Message(session)
+            .speak(speak(session, 'You can say \'nominate\''))
+            .addAttachment(card)
+            .inputHint(builder.InputHint.acceptingInput); // Tell Cortana to accept input
+        
+        session.send(msg)
+    },
+    (session, results) => {
+        console.log('hello')
+    }
+])
+
+
+/******************************* Helpers **********************************/
+
+
+async function getNomineeType(){
+    await timeout(3000)
+    
+    const choices = [
+        { value: '1', action: { title: 'Team' }, synonyms: 'one|team' },
+        { value: '2', action: { title: 'Individual' }, synonyms: 'two|individual' },            
+    ]
+    
+    return choices    
+}
+
+async function getNominationCategories(){
+    await timeout(3000)
+
+    var choices = [
+        { value: '1', action: { title: 'Nominate for Cleanest Desk award' }, synonyms: 'one|cleanest desk award' },
+        { value: '2', action: { title: 'Nominate for Cleanest Mug award' }, synonyms: 'two|too|cleanest mug award' },
+        { value: '3', action: { title: 'Nominate for Cleanest Keyboard award' }, synonyms: 'three|tree|cleanest keyboard award' },
+        { value: '4', action: { title: 'Nominate for Cleanest Screen award' }, synonyms: 'four|for|cleanest screen award' },
+    ]
+
+    return choices
+}
+
+async function timeout(ms){
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isValidEmail(value){
+    var matched = value.match(/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g);
+    return matched
+}
+
+/** Helper function to wrap SSML stored in the prompts file with <speak/> tag. */
+function speak(session, prompt) {
+    var localized = session.gettext(prompt);
+    return ssml.speak(localized);
+}

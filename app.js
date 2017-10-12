@@ -49,34 +49,69 @@ bot.on('error', (e) => {
 
 bot.dialog('/', [
     function (session) {
+        session.beginDialog('greetings')
+    },
+    function (session, results) {
+        session.beginDialog('years', results)
+    },
+    function (session, results) {
+        session.beginDialog('language', results)
+    },
+    function (session, results) {
+        session.beginDialog('summary', results)
+    }
+])
+
+bot.dialog('greetings', [
+    function (session) {
         builder.Prompts.text(session, "Hello... What's your name?", {
             speak: 'Hello... What is your name?',
             retrySpeak: 'Still here, please talk to me',
             inputHint: builder.InputHint.expectingInput
         });
     },
-    function (session, results) {
+    function(session, results){
         session.userData.name = results.response;
+        session.endDialog({ response: results.response })        
+    }
+])
+
+bot.dialog('years',[
+    function (session, results) {        
         builder.Prompts.number(session, "Hi " + results.response + ", How many years have you been coding?", {
             speak :  `Hi ${results.response} How many years have you been coding?`,
             retrySpeak: 'Still here, please talk to me',
             inputHint: builder.InputHint.expectingInput            
         }); 
     },
-    function (session, results) {
+    function(session, results){
         session.userData.coding = results.response;
+        session.endDialog({ response : results.response })
+    }
+])
+
+bot.dialog('language',[
+    function (session, results) {        
         builder.Prompts.choice(session, 'What language to code Node you are using?', ["JavaScript","CoffeeScript","TypeScript"], {
             listStyle: builder.ListStyle.button ,
             speak: 'What language to code Node you are using?'
         });
-    },
-    function (session, results) {
+    },    
+    function(session, results){
         session.userData.language = results.response.entity;
+        session.endDialog({ response : results.response })
+    }
+])
+    
+bot.dialog('summary',[
+    function (session, results) {        
         session.say(`Got it... ${session.userData.name} you've been programming for ${session.userData.coding} years and use ${session.userData.language}`,
         `Got it... ${session.userData.name} you've been programming for ${session.userData.coding} years and use ${session.userData.language}`);
+        session.endConversation()
     }
 ])
 
+/*
 bot.dialog('greetings', [
     (session, args, next) => {
     
@@ -220,6 +255,7 @@ bot.dialog('nominate', [
         console.log('hello')
     }
 ])
+*/
 
 bot.dialog('error', [
     (session, args) => {

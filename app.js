@@ -4,6 +4,8 @@ A simple echo bot for the Microsoft Bot Framework.
 
 var restify = require('restify');
 var builder = require('botbuilder');
+var speechTextLib = require('./store/speechTextLibrary')
+var ssml = require('./ssml');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -30,6 +32,16 @@ server.post('/api/messages', connector.listen());
 
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector);
+
+bot.on('conversationUpdate', (message) => {
+    if (message.membersAdded) {
+        message.membersAdded.forEach((identity) => {
+            if (identity.id === message.address.bot.id) {
+                bot.beginDialog(message.address, '/');
+            }
+        })
+    }
+})
 
 bot.dialog('/', [
     function (session) {

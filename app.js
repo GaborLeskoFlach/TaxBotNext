@@ -48,20 +48,35 @@ bot.on('error', (e) => {
 })
 
 bot.dialog('/', [
-    function (session) {
-        session.beginDialog('greetings')
+    (session, args, next) => {
+        session.say('This is a Bot Assistant to help with nominating individuals/teams for awards','This is a Bot Assistant to help with nominating individuals/teams for awards')
+        next()
     },
-    function (session, results) {
-        session.beginDialog('years', results)
+    (session, args, next) => {        
+        session.beginDialog('greetings')              
     },
-    function (session, results) {
-        session.beginDialog('language', results)
+    (session, args, next) => {
+        session.beginDialog('set_email')
+    },  
+    (session, args, next) => {
+        session.beginDialog('nominatedFor_selector')
     },
-    function (session, results) {
-        session.beginDialog('summary', results)
-    }
+    (session, args, next) => {
+        session.beginDialog('nominee_type')
+    },
+    (session, args, next) => {
+        session.beginDialog('nominee_name')
+    },
+    (session, args, next) => {
+        session.beginDialog('nominate')
+    },
+    (session, args) => {
+        session.endConversation("Thanks, it has been a pleasure")
+    }  
 ])
 
+
+/*
 bot.dialog('greetings', [
     function (session) {
         builder.Prompts.text(session, "Hello... What's your name?", {
@@ -110,11 +125,10 @@ bot.dialog('summary',[
         session.endConversation()
     }
 ])
+*/
 
-/*
 bot.dialog('greetings', [
-    (session, args, next) => {
-    
+    (session) => {
         builder.Prompts.text(session, speechTextLib.welcome_what_is_your_name, {
             speak: speechTextLib.welcome_what_is_your_name,
             retrySpeak: speechTextLib.welcome_still_waiting_for_input,
@@ -255,7 +269,7 @@ bot.dialog('nominate', [
         console.log('hello')
     }
 ])
-*/
+
 
 bot.dialog('error', [
     (session, args) => {

@@ -75,58 +75,6 @@ bot.dialog('/', [
     }  
 ])
 
-
-/*
-bot.dialog('greetings', [
-    function (session) {
-        builder.Prompts.text(session, "Hello... What's your name?", {
-            speak: 'Hello... What is your name?',
-            retrySpeak: 'Still here, please talk to me',
-            inputHint: builder.InputHint.expectingInput
-        });
-    },
-    function(session, results){
-        session.userData.name = results.response;
-        session.endDialog({ response: results.response })        
-    }
-])
-
-bot.dialog('years',[
-    function (session, results) {        
-        builder.Prompts.number(session, "Hi " + results.response + ", How many years have you been coding?", {
-            speak :  `Hi ${results.response} How many years have you been coding?`,
-            retrySpeak: 'Still here, please talk to me',
-            inputHint: builder.InputHint.expectingInput            
-        }); 
-    },
-    function(session, results){
-        session.userData.coding = results.response;
-        session.endDialog({ response : results.response })
-    }
-])
-
-bot.dialog('language',[
-    function (session, results) {        
-        builder.Prompts.choice(session, 'What language to code Node you are using?', ["JavaScript","CoffeeScript","TypeScript"], {
-            listStyle: builder.ListStyle.button ,
-            speak: 'What language to code Node you are using?'
-        });
-    },    
-    function(session, results){
-        session.userData.language = results.response.entity;
-        session.endDialog({ response : results.response })
-    }
-])
-    
-bot.dialog('summary',[
-    function (session, results) {        
-        session.say(`Got it... ${session.userData.name} you've been programming for ${session.userData.coding} years and use ${session.userData.language}`,
-        `Got it... ${session.userData.name} you've been programming for ${session.userData.coding} years and use ${session.userData.language}`);
-        session.endConversation()
-    }
-])
-*/
-
 bot.dialog('greetings', [
     (session) => {
         builder.Prompts.text(session, speechTextLib.welcome_what_is_your_name, {
@@ -176,15 +124,18 @@ bot.dialog('set_email', [
 ])
 
 bot.dialog('nominatedFor_selector', [
-    async (session, results) => {
+    (session, results) => {
         session.say('Please wait a second till I gather some data','Please bear with me till I gather some data')
-        const options = await getNominationCategories();
-        session.userData.nominationChoices = options
-        if(options){
-            builder.Prompts.choice(session, `All done, now please select/say which option you would like me to proceed with?`, options, {
-                speak: 'All done, now please select/say which option you would like me to proceed with'
-            })              
-        }
+        
+        getNominationCategories().then((response) => {
+            session.userData.nominationChoices = response
+            if(session.userData.nominationChoices){
+                builder.Prompts.choice(session, `All done, now please select/say which option you would like me to proceed with?`, session.userData.nominationChoices, {
+                    speak: 'All done, now please select/say which option you would like me to proceed with'
+                })              
+            }
+        })
+
     },
     (session, results) => {
         session.userData.activity = results.response.entity;
@@ -208,14 +159,14 @@ bot.dialog('nominatedFor_selector', [
 ])
 
 bot.dialog('nominee_type', [
-    async (session, args, next) => {
+    (session, args, next) => {
 
-        const choices = await getNomineeType()
-
-        builder.Prompts.choice(session, 'Are you nominating a Team or and Individual?', choices, {
-            listStyle: builder.ListStyle.button ,
-            speak: 'Are you nominating a Team or an Individual?'
-        });
+        getNomineeType().then((response) => {
+            builder.Prompts.choice(session, 'Are you nominating a Team or and Individual?', response, {
+                listStyle: builder.ListStyle.button ,
+                speak: 'Are you nominating a Team or an Individual?'
+            });
+        })
     },
     (session, args, next) => {
         if(args.response){
@@ -284,32 +235,28 @@ bot.dialog('error', [
     }
 ])
 
-async function getNomineeType(){
-    await timeout(3000)
-    
-    const choices = [
-        { value: '1', action: { title: 'Team' }, synonyms: 'one|team' },
-        { value: '2', action: { title: 'Individual' }, synonyms: 'two|individual' },            
-    ]
-    
-    return choices    
+function getNomineeType(){
+    return new Promise((resolve,reject) => {
+        const choices = [
+            { value: '1', action: { title: 'Team' }, synonyms: 'one|team' },
+            { value: '2', action: { title: 'Individual' }, synonyms: 'two|individual' },            
+        ]
+        setTimeout(() => resolve(choices), 3000);       
+    })
+       
 }
 
-async function getNominationCategories(){
-    await timeout(3000)
-
-    var choices = [
-        { value: '1', action: { title: 'Nominate for Cleanest Desk award' }, synonyms: 'one|cleanest desk award' },
-        { value: '2', action: { title: 'Nominate for Cleanest Mug award' }, synonyms: 'two|too|cleanest mug award' },
-        { value: '3', action: { title: 'Nominate for Cleanest Keyboard award' }, synonyms: 'three|tree|cleanest keyboard award' },
-        { value: '4', action: { title: 'Nominate for Cleanest Screen award' }, synonyms: 'four|for|cleanest screen award' },
-    ]
-
-    return choices
-}
-
-async function timeout(ms){
-    return new Promise(resolve => setTimeout(resolve, ms));
+function getNominationCategories(){
+    return new Promise((resolve,reject) => {
+        var choices = [
+            { value: '1', action: { title: 'Nominate for Cleanest Desk award' }, synonyms: 'one|cleanest desk award' },
+            { value: '2', action: { title: 'Nominate for Cleanest Mug award' }, synonyms: 'two|too|cleanest mug award' },
+            { value: '3', action: { title: 'Nominate for Cleanest Keyboard award' }, synonyms: 'three|tree|cleanest keyboard award' },
+            { value: '4', action: { title: 'Nominate for Cleanest Screen award' }, synonyms: 'four|for|cleanest screen award' },
+        ]
+    
+        setTimeout(() => resolve(choices), 3000);        
+    })
 }
 
 function isValidEmail(value){

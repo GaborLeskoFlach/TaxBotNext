@@ -7,6 +7,7 @@ var builder = require('botbuilder');
 var speechTextLib = require('./store/speechTextLibrary')
 var ssml = require('./ssml');
 var fetch = require('node-fetch')
+var Store = require('./store');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -298,7 +299,10 @@ bot.dialog('menu', [
                     break
                 case "5":
                     session.replaceDialog('help')
-                    break                    
+                    break   
+                case "6":
+                    session.replaceDialog('api_test')
+                    break                 
                 default:
                     session.replaceDialog('menu')
             }
@@ -374,6 +378,37 @@ bot.dialog('quick_nomination', [
     }     
 ])
 
+bot.dialog('api_test', [
+    (session) => {
+
+        builder.Prompts.text(session, "What is your destination?", {
+            speak: "What is your destination?",
+            retrySpeak: speechTextLib.welcome_still_waiting_for_input,
+            inputHint: builder.InputHint.acceptingInput
+        })                
+    },
+    (session, results) => {
+        const destination = results.response
+        
+        // Async search
+        Store
+        .searchHotels(destination)
+        .then((hotels) => {
+            // args
+            session.send('I found %d hotels:', hotels.length);
+
+            var message = new builder.Message()
+                .attachmentLayout(builder.AttachmentLayout.carousel)
+                .attachments(hotels.map(hotelAsAttachment));
+
+            session.send(message);
+
+            // End
+            session.endDialog();
+        });              
+    }
+])
+
 bot.dialog('get_my_nominations', [
     (session, args) => {
         session.say('These are all your nominations', 'There are all your nominations')
@@ -434,6 +469,7 @@ var supportedFunctions = [
     { value: '3', action: { title: 'Get all users to nominate' }, synonyms: 'three|tree|get users|get all users|get users to nominate|get all users to nominate' },
     { value: '4', action: { title: 'Get awards' }, synonyms: 'four|for|get all awards|get awards' },
     { value: '5', action: { title: 'Help' }, synonyms: 'five|help|need help|I need help|save me' },
+    { value: '6', action: { title: 'Api test' }, synonyms: 'six|api test' },
 ]
 
 function createHeroCard(session) {
@@ -537,3 +573,16 @@ function speak(session, prompt) {
 }
 
 
+// Helpers
+function hotelAsAttachment(hotel) {
+    return new builder.HeroCard()
+        .title(hotel.name)
+        .subtitle('%d stars. %d reviews. From $%d per night.', hotel.rating, hotel.numberOfReviews, hotel.priceStarting)
+        .images([new builder.CardImage().url(hotel.image)])
+        .buttons([
+            new builder.CardAction()
+                .title('More details')
+                .type('openUrl')
+                .value('https://www.bing.com/search?q=hotels+in+' + encodeURIComponent(hotel.location))
+        ]);
+}

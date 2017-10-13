@@ -35,6 +35,7 @@ server.post('/api/messages', connector.listen());
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector);
 
+/*
 bot.on('conversationUpdate', (message) => {
     if (message.membersAdded) {
         message.membersAdded.forEach((identity) => {
@@ -43,7 +44,7 @@ bot.on('conversationUpdate', (message) => {
             }
         })
     }
-})
+})*/
 
 bot.on('error', (e) => {
     bot.beginDialog('error', e)
@@ -51,11 +52,13 @@ bot.on('error', (e) => {
 
 bot.dialog('/', [
     (session, args, next) => {        
+        //session.beginDialog('quick_nomination')
         session.beginDialog('greetings')
     },
+    /*
     (session, args, next) => {
         session.beginDialog('set_email')
-    },  
+    },*/  
     (session, args, next) => {
         session.beginDialog('nominatedFor_selector')
     },
@@ -90,7 +93,7 @@ bot.dialog('greetings', [
             session.userData.firstName = nameParts[0] ? nameParts[0] : ''
             session.userData.lastName = nameParts[1] ? nameParts[1] : ''
         }
-        session.beginDialog('set_email')
+        session.beginDialog('quick_nomination')
     },    
 ])
 
@@ -313,8 +316,8 @@ bot.dialog('menu', [
 bot.dialog('quick_nomination', [
     (session) => {
 
-        builder.Prompts.text(session, "Please say in one sentence who you would like to nominate for what award", {
-            speak: "Please say in one sentence who you would like to nominate for what award",
+        builder.Prompts.text(session, `${session.userData.firstName} please say in one sentence who you would like to nominate for what award`, {
+            speak: `${session.userData.firstName} please say in one sentence who you would like to nominate for what award`,
             retrySpeak: speechTextLib.welcome_still_waiting_for_input,
             inputHint: builder.InputHint.acceptingInput
         })
@@ -326,6 +329,26 @@ bot.dialog('quick_nomination', [
             const temp = text.toLowerCase().replace('i would like to nominate','').replace("i'd like to nominate")
             const username = temp.substring(0, temp.indexOf('for')).trim()
             const award = temp.toLowerCase().replace(username,'').replace('for','').trim()
+
+            if(username.toLowerCase().indexOf('jagdeep') > -1){
+                session.userData.nominatedFor = 2
+                session.userData.nominee = 4
+            }else if(username.toLowerCase().indexOf('hao') > -1){
+                session.userData.nominatedFor = 2
+                session.userData.nominee = 3
+            }else if(username.toLowerCase().indexOf('selfie') > -1){
+                session.userData.nominatedFor = 1
+                session.userData.nominee = 2
+            }else if(username.toLowerCase().indexOf('streedcreds') > -1){
+                session.userData.nominatedFor = 1
+                session.userData.nominee = 1                                         
+            }else if(username.toLowerCase().indexOf('andrew') > -1){
+                session.userData.nominatedFor = 2
+                session.userData.nominee = 5               
+            }else{
+                session.userData.nominatedFor = 2
+                session.userData.nominee = 4             
+            }
 
             if(username && award){
                 builder.Prompts.confirm(session, "You can also post a message along with your nomination. It is optional. Would you like to do that?",{
@@ -355,7 +378,14 @@ bot.dialog('quick_nomination', [
         if(results.response){
             session.say('Thanks. Posting Nomination now...','Thanks. Posting Nomination now...')
 
-            nominate(session).then((response) => {
+            var entity = {
+                awardId : session.userData.nominatedFor,
+                awardNomineeId : session.userData.nominee,
+                message : results.response,
+                labels : '#human'              
+            }
+
+            nominate(entity).then((response) => {
                 builder.Prompts.confirm(session, "All done, nomination has been posted. Is there anything else I can help you with?", {
                     speak: "All done, nomination has been posted. Is there anything else I can help you with?",
                     retrySpeak: "Still here waiting for your input",
@@ -464,12 +494,12 @@ bot.dialog('help', function (session) {
 
 var supportedFunctions = [
     { value: '0', action: { title: 'Quick Nomination' }, synonyms: 'zero|null|quick nomination|nomination|quicky|quick one' },
-    { value: '1', action: { title: 'Nominate a Team or Individual for an award' }, synonyms: 'one|nominate|nominate a team|nominate an individual|nominate for award' },
-    { value: '2', action: { title: 'Get my nominations' }, synonyms: 'two|too|get nominations|get my nominations|my nominations' },
-    { value: '3', action: { title: 'Get all users to nominate' }, synonyms: 'three|tree|get users|get all users|get users to nominate|get all users to nominate' },
-    { value: '4', action: { title: 'Get awards' }, synonyms: 'four|for|get all awards|get awards' },
-    { value: '5', action: { title: 'Help' }, synonyms: 'five|help|need help|I need help|save me' },
-    { value: '6', action: { title: 'Api test' }, synonyms: 'six|api test' },
+    //{ value: '1', action: { title: 'Nominate a Team or Individual for an award' }, synonyms: 'one|nominate|nominate a team|nominate an individual|nominate for award' },
+    //{ value: '2', action: { title: 'Get my nominations' }, synonyms: 'two|too|get nominations|get my nominations|my nominations' },
+    //{ value: '3', action: { title: 'Get all users to nominate' }, synonyms: 'three|tree|get users|get all users|get users to nominate|get all users to nominate' },
+    //{ value: '4', action: { title: 'Get awards' }, synonyms: 'four|for|get all awards|get awards' },
+    //{ value: '5', action: { title: 'Help' }, synonyms: 'five|help|need help|I need help|save me' },
+    //{ value: '6', action: { title: 'Api test' }, synonyms: 'six|api test' },
 ]
 
 function createHeroCard(session) {
@@ -541,8 +571,8 @@ function nominate(entity){
             labels : entity.label
         }
 
-        var z = JSON.stringify(body)
-        console.log(JSON.stringify(body))
+        //var z = JSON.stringify(body)
+        //console.log(JSON.stringify(body))
 
         fetch('http://pengcxps.asuscomm.com/api/votes', 
         { 

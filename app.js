@@ -514,7 +514,7 @@ function getAwards(){
         setTimeout(() => resolve(choices), 3000);
         */
 
-        fetch('http://xlw-cnd70778yz.inside.xero.com/api/awards', 
+        fetch('http://pengcxps.asuscomm.com/api/awards', 
         { 
             method: 'GET', 
             headers: { 'Content-Type': 'application/json; charset=UTF-8' },
@@ -544,7 +544,7 @@ function nominate(entity){
         var z = JSON.stringify(body)
         console.log(JSON.stringify(body))
 
-        fetch('http://xlw-cnd70778yz.inside.xero.com/api/votes', 
+        fetch('http://pengcxps.asuscomm.com/api/votes', 
         { 
             method: 'POST', 
             body: JSON.stringify(body),
